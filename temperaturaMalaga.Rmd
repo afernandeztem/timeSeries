@@ -1,0 +1,110 @@
+---
+title: "TemperaturaMalaga"
+author: "Ángel Fernandez Temiño"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+temp <- read.csv("C:/Users/angel/Desktop/Master UMA/DataScience/Datasets/temp.csv")
+library(TTR)
+library(forecast)
+library(tseries)
+```
+
+## Crear y dibujar serie temporal.
+
+Importa la serie de temperaturas en un objeto time series con frecuencia 12 meses y dibuja la serie.
+
+```{r data}
+temp.f1 <- ts(temp$tm_min, frequency=12, start = c(2001,1))
+plot.ts(temp.f1)
+```
+
+## Descomposición de los datos
+Seasonal, Trend, Cycle and Residual component
+```{r seasonal}
+tempDecompose <- decompose(temp.f1)
+season <- tempDecompose$seasonal
+plot.ts(season, main="Season")
+trend <- tempDecompose$trend
+plot.ts(trend, main="Trend")
+cycle <- tempDecompose$figure
+plot.ts(cycle, main="Cycle")  
+residual <- tempDecompose$random
+plot.ts(residual, main="Residual")
+
+```
+
+## Eliminar la estacionalidad
+Para eliminar la estacionalidad usar la función seasadj() de paquete forecast. Dibuja la serie tras esta eliminación.
+
+```{r}
+  tempWithoutSeason <- seasadj(tempDecompose)
+  plot.ts(tempWithoutSeason)
+```
+
+Podemos observar que las temperaturas mínimas se produce un aumento de temperatura media en los meses de verano frente a los meses de invierno.
+
+#Dibujar la serie por meses 
+Dibuja graficamente la serie por meses (subserie). ¿Qué interpretas de los gráficos?
+
+```{r}
+ ggseasonplot(temp.f1, continuous = TRUE, main="Temperatura según mes")
+```
+
+Como podemos ver en la gráfica, el mes de febrero es el mes mas inesperado donde puede oscilar desde temperaturas frías a muy frías. Sin embargo, tambien podemos observar que en los meses de julio y agosto siempre se encontrarán las temperaturas mas altas de todo el año.
+
+## ARIMA
+El ajuste de un modelo ARIMA requiere que la serie sea estacionaria. Usa adf.test para comprobar si la serie que estamos analizando es estacionaria.
+
+```{r}
+  adf.test(temp.f1)
+  adf.test(season)
+  adf.test(tempWithoutSeason)
+```
+
+## Métodos de predicción
+Usa los siguientes métodos de predicción y representa graficamente dicha predicción.
+
+```{r}
+  avMethod <- meanf(temp.f1, 10)
+  plot(avMethod, main = "Average method")
+  nai <- naive(temp.f1, 10)
+  plot(nai, main = "Naïve  method")
+  snai <- snaive(temp.f1, 35)
+  plot(snai, main = "Seasonal naïve method")
+  drift <- rwf(temp.f1, 30, drift = TRUE)
+  plot(drift, main = "Drift  method")
+```
+
+## Ajuste estacional
+Extrae conclusiones del análisis de las distintas predicciones. -Ajusta estacionalmente la serie temporal estimando el componente estacional y restando el componente estacional estimado de la serie temporal original. Dibuja la serie obtenida.
+
+```{r}
+tempAjustada <- temp.f1 - season
+
+plot(tempAjustada)
+```
+Como podemos ver nos encontrabamos con una dataset estacional y como podemos ver, a la hora de quitarle la componente estacionalidad cambia competamente.
+
+## HoltWinters
+Utiliza el método de suavizado exponencial de HoltWinters para hacer predicción. Dibuja la preducción. Utiliza distintos valores para alpha y para beta.
+
+```{r}
+ holtwinters1 <- HoltWinters(temp.f1, alpha = 0.1, beta = TRUE, gamma = TRUE)
+ plot(holtwinters1, main="alpha = 0.1 && beta = TRUE")
+ holtwinters2 <- HoltWinters(temp.f1, alpha = 0.5, beta = FALSE, gamma = TRUE)
+ plot(holtwinters2, main="alpha = 0.5 && beta = FALSE")
+ holtwinters3 <- HoltWinters(temp.f1, alpha =1, beta = FALSE, gamma = TRUE)
+ plot(holtwinters3, main="alpha = 1 && beta = FALSE")
+```
+
+## Predicción a partir de HoltWinters
+Utiliza el método de forecast.HoltWinters para ver la predicción para los 2 años sigueintes a los que tenemos en la serie.
+
+```{r}
+  plot(forecast(holtwinters1), 24)
+  plot(forecast(holtwinters2), 24)
+  plot(forecast(holtwinters3), 24)
+```

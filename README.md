@@ -1,1 +1,1 @@
-# timeSeries
+# Examples of time Series
